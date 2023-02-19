@@ -28,7 +28,7 @@ public void OnPluginStart()
 	g_cColorGag = CreateConVar("discord_sourcecomms_color_gag", "#ffff22", "Discord/Slack attachment gag color.");
 	g_cColorMute = CreateConVar("discord_sourcecomms_color_mute", "#2222ff", "Discord/Slack attachment mute color.");
 	g_cColorSilence = CreateConVar("discord_sourcecomms_color_silence", "#ff22ff", "Discord/Slack attachment silence color.");
-	g_cSourcebans = CreateConVar("discord_sourcecomms_url", "https://snksrv.com/bans/index.php?p=commslist&searchText={STEAMID}", "Link to sourcebans.");
+	g_cSourcebans = CreateConVar("discord_sourcecomms_url", "https://snksrv.com/bans/index.php?p=commslist&searchText={WILDCARDSTEAMID}", "Link to sourcebans.");
 	g_cConsole = CreateConVar("discord_sourcebans_console", "1", "Enable/Disable logging for comms enforcement from the console");
 	g_cWebhook = CreateConVar("discord_sourcecomms_webhook", "sourcecomms", "Config key from configs/discord.cfg.");
 	
@@ -38,12 +38,22 @@ public void OnPluginStart()
 public int SourceComms_OnBlockAdded(int client, int target, int time, int type, char[] reason)
 {
 	PrePareMsg(client, target, time, type, reason);
+
+	return 0;
 }
 
 public int PrePareMsg(int client, int target, int time, int type, char[] reason)
 {
-	char sAuth[32];
+	char sAuth[32], sDisplayAuth[32];
 	GetClientAuthId(target, AuthId_Steam2, sAuth, sizeof(sAuth));
+	Format(sDisplayAuth, 32, sAuth);
+
+	ReplaceString(sDisplayAuth, 32, "STEAM_1:0:", "", true);
+	ReplaceString(sDisplayAuth, 32, "STEAM_1:1:", "", true);
+	ReplaceString(sDisplayAuth, 32, "STEAM_0:1:", "", true);
+	ReplaceString(sDisplayAuth, 32, "STEAM_0:0:", "", true);
+
+	// PrintToConsole(0, "%s - %i", sDisplayAuth, ReplaceString(sDisplayAuth, 32, "STEAM_1:0:", "", true));
 	
 	char sAuth64[32];
 	GetClientAuthId(target, AuthId_SteamID64, sAuth64, sizeof(sAuth64));
@@ -57,18 +67,18 @@ public int PrePareMsg(int client, int target, int time, int type, char[] reason)
 	char sAdminField[256];
 	if ((client == 0) && !GetConVarBool(g_cConsole))
 	{
-		return;
+		return 0;
 	}
 	if (client >= 1)
 	{
 		GetClientName(client, sAdminName, sizeof(sAdminName));
 		GetClientAuthId(client, AuthId_Steam2, sAdminAuth, sizeof(sAdminAuth));
 		GetClientAuthId(client, AuthId_SteamID64, sAdminAuth64, sizeof(sAdminAuth64));
-		Format(sAdminField, sizeof(sAdminField), "%s ([%s](https://steamcommunity.com/profiles/%s))", sAdminName, sAdminAuth, sAdminAuth64)
+		Format(sAdminField, sizeof(sAdminField), "%s ([%s](https://steamcommunity.com/profiles/%s))", sAdminName, sAdminAuth, sAdminAuth64);
 	}
 	else
 	{
-		Format(sAdminField, sizeof(sAdminField), "CONSOLE")
+		Format(sAdminField, sizeof(sAdminField), "CONSOLE");
 	}
 
 	char sHostName[128];
@@ -142,6 +152,7 @@ public int PrePareMsg(int client, int target, int time, int type, char[] reason)
 	ReplaceString(sMSG, sizeof(sMSG), "{COLOR}", sColor);
 	ReplaceString(sMSG, sizeof(sMSG), "{COMMTYPE}", sType);
 	ReplaceString(sMSG, sizeof(sMSG), "{SOURCEBANS}", sSourcebans);
+	ReplaceString(sMSG, sizeof(sMSG), "{WILDCARDSTEAMID}", sDisplayAuth);
 	ReplaceString(sMSG, sizeof(sMSG), "{STEAMID}", sAuth);
 	ReplaceString(sMSG, sizeof(sMSG), "{STEAMID64}", sAuth64);
 	ReplaceString(sMSG, sizeof(sMSG), "{REASON}", reason);
@@ -152,6 +163,8 @@ public int PrePareMsg(int client, int target, int time, int type, char[] reason)
 	ReplaceString(sMSG, sizeof(sMSG), "{TIMESTAMP}", szTimestamp);
 	
 	SendMessage(sMSG);
+
+	return 0;
 }
 
 SendMessage(char[] sMessage)
